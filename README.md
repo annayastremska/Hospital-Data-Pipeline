@@ -41,7 +41,7 @@ This project simulates a real-world hospital data engineering workflow. It conti
 ### 📊 Dashboard
 
 - [Interactive Version (Looker Studio)](https://datastudio.google.com/reporting/6bac9074-a888-4066-94c7-3f48dce74a10)  
-- [Static PDF Version](docs/your_report.pdf)
+- [Static PDF Version](docs/Looker_Studio_Report.pdf)
 
 ---
 
@@ -72,7 +72,6 @@ The platform is organised into six logical layers:
 | **Google BigQuery** | Cloud data warehouse — raw, staging, and mart datasets |
 | **dbt Core / dbt Cloud** | SQL transformations, testing, documentation, scheduling |
 | **Looker Studio** | BI dashboards connected live to BigQuery marts |
-| **Python (pandas, google-cloud)** | ETL logic inside Airflow PythonOperators |
 
 ![DBT lineage](screenshots/DBT/01_dbt_lineage.png)
 
@@ -178,7 +177,7 @@ This DAG continuously feeds the OLTP database with realistic synthetic data. It 
 **How it works:**
 
 ```python
-# Weighted encounter class selection — mirrors real hospital volume distribution
+# Weighted encounter class selection — imitates real hospital volume distribution
 ENCOUNTER_CLASSES = ["ambulatory", "outpatient", "wellness", "urgentcare", "emergency", "inpatient"]
 ENCOUNTER_CLASS_WEIGHTS = [12537, 6300, 1931, 3666, 2322, 1135]
 
@@ -186,7 +185,6 @@ enc_class = random.choices(ENCOUNTER_CLASSES, weights=ENCOUNTER_CLASS_WEIGHTS, k
 ```
 
 ```python
-# Vitals are generated using per-class Gaussian profiles
 # Emergency patients have elevated heart rate and temperature vs. wellness visits
 VITALS_PROFILES = {
     "emergency":  {"hr": (105, 15), "o2": (95, 2),  "temp": (38.1, 0.4), ...},
