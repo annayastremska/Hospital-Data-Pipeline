@@ -30,7 +30,7 @@
 
 ![BigQuery datasets](screenshots/BigQuery/BQ_datasets.png)
 
-This project simulates a real-world hospital data engineering workflow. It continuously generates synthetic patient encounters, routes them through a multi-hop pipeline, transforms raw clinical data into clean analytical marts with dbt, and surfaces insights in a live Looker Studio dashboard.
+This project simulates a real-world hospital data engineering workflow. It continuously generates synthetic patient encounters, routes them through a pipeline involving multiple tools, transforms raw clinical data into clean analytical marts with dbt, and surfaces insights in a live Looker Studio dashboard.
 
 **Key highlights:**
 - Fully automated, incremental pipeline — no manual interventions required
@@ -40,7 +40,7 @@ This project simulates a real-world hospital data engineering workflow. It conti
 
 ### 📊 Dashboard
 
-- [Interactive Version (Looker Studio)](https://datastudio.google.com/reporting/6bac9074-a888-4066-94c7-3f48dce74a10)  
+- [Interactive Version (Looker Studio)](https://datastudio.google.com/s/tchb87RWnYU)  
 - [Static PDF Version](docs/Looker_Studio_Report.pdf)
 
 ---
@@ -51,8 +51,8 @@ The platform is organised into six logical layers:
 
 | Layer | Component | Role |
 |---|---|---|
-| ① Simulation | Airflow `simulate_patient_visits` | Generates new encounters every 15 minutes into Cloud SQL + GCS |
-| ② Raw | BigQuery `dbt_hospital_raw` | Landing zone for all source tables, loaded via incremental ETL |
+| ① Simulation and Load| Airflow `simulate_patient_visits` & `healthcare_pipeline_dag` | Generates new encounters every 15 minutes into Cloud SQL + GCS; Loads OLTP tables into BQ|
+| ② Raw | BigQuery `dbt_hospital_raw` | Landing zone for all source tables, loaded via incremental ETL and jsons via external table |
 | ③ Staging | dbt views in `dbt_hospital_stg` | Rename, cast, and lightly clean raw tables |
 | ④ Mart | dbt tables in `dbt_hospital_mart` | Business-ready aggregated tables for analytics |
 | ⑤ Orchestration | dbt Cloud (hourly cron) | Rebuilds marts and runs all 73 tests every hour |
@@ -66,7 +66,7 @@ The platform is organised into six logical layers:
 
 | Tool | Purpose |
 |---|---|
-| **Google Cloud SQL (MySQL)** | OLTP source — stores live encounter and procedure records |
+| **Google Cloud SQL (MySQL)** | OLTP source — stores live encounter, procedure, and patient records |
 | **Google Cloud Storage** | Data lake — stores vitals as JSONL files |
 | **Apache Airflow (Cloud Composer)** | Orchestrates simulation and incremental ETL DAGs |
 | **Google BigQuery** | Cloud data warehouse — raw, staging, and mart datasets |
@@ -81,13 +81,14 @@ The platform is organised into six logical layers:
 
 ```
                     Every 15 min                  Hourly
-  ┌─────────────────────────────┐     ┌──────────────────────────────┐
-  │  Airflow: simulate_visits   │     │  Airflow: healthcare_pipeline│
-  │  • generate encounter       │     │  • Extract from Cloud SQL    │
-  │  • pick procedures from BQ  │     │    (watermark-based)         │
-  │  • save to Cloud SQL        │────>│  • Transform (clean, validate)│
+  ┌─────────────────────────────┐     ┌─────────────────────────────────┐
+  │  Airflow: simulate_visits   │     │  Airflow: healthcare_pipeline   │
+  │  • generate encounter,      │     │                                 │
+  │     procedure, vital        │     │  • Extract from Cloud SQL       │
+  │  • pick procedures from BQ  │     │    (watermark-based)            │
+  │  • save to Cloud SQL        │────>│  • Transform (clean, validate)  │
   │  • save vitals JSONL to GCS │     │  • Load to BQ raw (WRITE_APPEND)│
-  └─────────────────────────────┘     └──────────────────────────────┘
+  └─────────────────────────────┘     └─────────────────────────────────┘
                                                       │
                                                       ▼
                                         BigQuery: dbt_hospital_raw
@@ -394,6 +395,7 @@ Three datasets created by the pipeline:
 ---
 
 ## dbt Cloud Orchestration
+Runs every hour after the loading DAG rebuilding the models, making sure they pass all the tests.
 
 ![DBT job details](screenshots/DBT/dbt_job_setup.png)
 
@@ -404,7 +406,7 @@ Three datasets created by the pipeline:
 ### 📊 Dashboard
 
 - [Interactive Version (Looker Studio)](https://datastudio.google.com/s/tchb87RWnYU)  
-- [Static PDF Version](docs/your_report.pdf)
+- [Static PDF Version](docs/Looker_Studio_Report.pdf)
 
 **Report:** Clinic Report (3 pages)  
 **Data source:** BigQuery `dbt_hospital_mart` (live connector)
@@ -493,7 +495,7 @@ dbt build --store-failures
 
 ## What's Next / Possible Improvements
 
-- **Alerting:** Add dbt Cloud webhooks or Airflow email alerts for test failures or stale data
+- **Alerting:** Use the metrics from the interactive dashboard as triggers that notify in case of sudden decrease.
 - **ML integration:** Use `mart_readmissions` and `mart_vitals_by_visit_frequency` as feature tables for a readmission risk model (Vertex AI)
 
 ---
