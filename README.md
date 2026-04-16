@@ -403,7 +403,7 @@ Three datasets created by the pipeline:
 
 ### 📊 Dashboard
 
-- [Interactive Version (Looker Studio)](https://datastudio.google.com/reporting/6bac9074-a888-4066-94c7-3f48dce74a10)  
+- [Interactive Version (Looker Studio)](https://datastudio.google.com/s/tchb87RWnYU)  
 - [Static PDF Version](docs/your_report.pdf)
 
 **Report:** Clinic Report (3 pages)  
