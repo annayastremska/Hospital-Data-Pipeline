@@ -97,12 +97,12 @@ The platform is organised into six logical layers:
                                                       │
                                               dbt build (hourly)
                                                       │
-                                  ┌───────────────────┴──────────────────┐
-                                  ▼                                       ▼
+                                  ┌───────────────────┴
+                                  ▼                                       
                         dbt_hospital_stg (views)              dbt_hospital_mart (tables)
                         stg_encounters                         fact_executive_summary
                         stg_patients                           mart_organ_system_investment
-                        stg_procedures                         mart_encounter_class
+                        stg_procedures     ──────────────>     mart_encounter_class
                         stg_vitals                             mart_payer_performance
                         stg_payers                             mart_readmissions
                         stg_medicines                          mart_age_demographics_profile
