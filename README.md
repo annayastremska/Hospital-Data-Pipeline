@@ -1,8 +1,44 @@
-# 🏥 Hospital Data Pipeline
+# 🏥 Hospital Data Platform
 
-An end-to-end data engineering project simulating a realistic healthcare analytics platform. Data flows from an OLTP clinic database through cloud-based ingestion, transformation, and visualization layers — fully orchestrated, tested, and documented.
+> An end-to-end healthcare analytics pipeline — from simulated OLTP events to a live executive dashboard — built on Google Cloud, Apache Airflow, dbt, and Looker Studio.
 
-> **Stack:** Cloud SQL (MySQL) · Apache Airflow · Google Cloud Storage · BigQuery · dbt Cloud · Looker Studio
+---
+
+## Table of Contents
+
+1. [Project Overview](#project-overview)
+2. [Architecture](#architecture)
+3. [Tech Stack](#tech-stack)
+4. [Data Flow](#data-flow)
+5. [Repository Structure](#repository-structure)
+6. [Pipeline Components](#pipeline-components)
+   - [Simulation DAG](#1-simulation-dag-simulate_patient_visits)
+   - [ETL DAG](#2-etl-dag-healthcare_pipeline_incremental)
+   - [dbt Staging Layer](#3-dbt-staging-layer)
+   - [dbt Mart Layer](#4-dbt-mart-layer)
+   - [dbt Tests & Macros](#5-dbt-tests--macros)
+7. [BigQuery Datasets](#bigquery-datasets)
+8. [dbt Cloud Orchestration](#dbt-cloud-orchestration)
+9. [Looker Studio Dashboard](#looker-studio-dashboard)
+10. [Key Business Questions Answered](#key-business-questions-answered)
+11. [Setup & Running](#setup--running)
+12. [What's Next / Possible Improvements](#whats-next--possible-improvements)
+
+---
+
+## Project Overview
+
+![BigQuery datasets](screenshots/BigQuery/BQ_datasets.png)
+
+This project simulates a real-world hospital data engineering workflow. It continuously generates synthetic patient encounters, routes them through a multi-hop pipeline, transforms raw clinical data into clean analytical marts with dbt, and surfaces insights in a live Looker Studio dashboard.
+
+**Key highlights:**
+- Fully automated, incremental pipeline — no manual interventions required
+- 73 dbt data quality tests, all passing in production
+- 8 analytical marts covering executive KPIs, clinical quality, financial exposure, and demographic profiling
+- Live Looker Studio report connected directly to BigQuery mart tables
+
+[![Interactive Dashboard](docs/dashboard_preview.png)](https://datastudio.google.com/reporting/6bac9074-a888-4066-94c7-3f48dce74a10)
 
 ---
 
@@ -10,297 +46,480 @@ An end-to-end data engineering project simulating a realistic healthcare analyti
 
 ![Architecture Diagram](docs/architecture.png)
 
-| Layer | Technology | Role |
+The platform is organised into six logical layers:
+
+| Layer | Component | Role |
 |---|---|---|
-| **OLTP Source** | Cloud SQL (MySQL) | Clinic transactional DB — encounters, procedures, patients |
-| **Simulation** | Airflow DAG | Generates new patient visits + vitals every 15 minutes |
-| **Ingestion** | Airflow DAG | Incremental ETL: CloudSQL → BigQuery (hourly, WRITE_APPEND) |
-| **Object Storage** | Google Cloud Storage | Landing zone for streaming vitals JSON files |
-| **Data Warehouse** | BigQuery | Three-layer medallion: raw → staging → mart |
-| **Transformation** | dbt Cloud | Models, macros, seeds, tests — rebuilt hourly |
-| **Visualization** | Looker Studio | 3-page executive dashboard connected to mart layer |
+| ① Simulation | Airflow `simulate_patient_visits` | Generates new encounters every 15 minutes into Cloud SQL + GCS |
+| ② Raw | BigQuery `dbt_hospital_raw` | Landing zone for all source tables, loaded via incremental ETL |
+| ③ Staging | dbt views in `dbt_hospital_stg` | Rename, cast, and lightly clean raw tables |
+| ④ Mart | dbt tables in `dbt_hospital_mart` | Business-ready aggregated tables for analytics |
+| ⑤ Orchestration | dbt Cloud (hourly cron) | Rebuilds marts and runs all 73 tests every hour |
+| ⑥ Visualization | Looker Studio | 3-page interactive Clinic Report |
 
 ---
 
-## Data Sources
+## Tech Stack
 
-### OLTP: Cloud SQL (MySQL) — `clinic_db`
+![AirFlow](screenshots/AirFlow/airflow_overview.png)
 
-Three tables fed into the pipeline via incremental Airflow extraction:
+| Tool | Purpose |
+|---|---|
+| **Google Cloud SQL (MySQL)** | OLTP source — stores live encounter and procedure records |
+| **Google Cloud Storage** | Data lake — stores vitals as JSONL files |
+| **Apache Airflow (Cloud Composer)** | Orchestrates simulation and incremental ETL DAGs |
+| **Google BigQuery** | Cloud data warehouse — raw, staging, and mart datasets |
+| **dbt Core / dbt Cloud** | SQL transformations, testing, documentation, scheduling |
+| **Looker Studio** | BI dashboards connected live to BigQuery marts |
+| **Python (pandas, google-cloud)** | ETL logic inside Airflow PythonOperators |
 
-| Table | Description | Key columns |
-|---|---|---|
-| `encounters` | Every patient visit | `id`, `start`, `stop`, `patient`, `organization`, `payer`, `encounterclass`, `total_claim_cost` |
-| `procedures` | Procedures performed per encounter | `encounter`, `patient`, `code`, `description`, `base_cost` |
-| `patients` | Patient demographics | `id`, `birthdate`, `race`, `gender`, `zip` |
-
-> Cloud SQL screenshot — the `encounters` table preview:
-
-![Cloud SQL Encounters](screenshots/CloudSQL__Google-Cloud-Storage/cloudsql_encounters_preview.png)
-
-### dbt Seeds (static reference data)
-
-Loaded directly into BigQuery staging via `dbt seed`:
-
-- `organizations.csv` — clinic facilities
-- `payers.csv` — insurance companies
-- `medicines.csv` — medication catalog
-- `procedure_costs.csv` — base cost reference
-
-### Simulated Vitals (JSON → GCS)
-
-A custom Airflow DAG (`simulate_patient_visits`) generates realistic patient vitals every 15 minutes and saves them as newline-delimited JSON files to GCS. These are then loaded into BigQuery raw as the `vitals` table.
-
-```
-hospital-data-lake/
-  vitals_json/
-    vitals_2022.jsonl          ← batch historical load
-    vitals_20220205_211336_...  ← streaming micro-files (every 15 min)
-```
-
-![GCS Bucket](screenshots/CloudSQL__Google-Cloud-Storage/gcs_vitals_bucket.png)
+![DBT lineage](screenshots/DBT/dbt_lineage.png)
 
 ---
 
-## Orchestration: Apache Airflow
-
-Two DAGs run on a GCP VM, managing all data movement.
-
-![Airflow DAGs Overview](screenshots/AirFlow/airflow_dags_list.png)
-
-### DAG 1 — `healthcare_pipeline_incremental`
-
-**Schedule:** Hourly (`10 * * * *`)  
-**Description:** CloudSQL MySQL → BigQuery incremental ETL  
-**Tasks:** `start → extract → transform_enc + transform_proc → load → end`
-
-The `extract` task pulls new records from Cloud SQL since the last watermark. `transform_enc` and `transform_proc` apply encoding/cleaning logic before the `load` task appends to BigQuery raw with `WRITE_APPEND`.
-
-![healthcare_pipeline_incremental DAG graph](screenshots/AirFlow/airflow_healthcare_pipeline_dag.png)
-
-### DAG 2 — `simulate_patient_visits`
-
-**Schedule:** Every 15 minutes (`*/15 * * * *`)  
-**Description:** Симуляція нових візитів пацієнтів кожні 15 хвилин  
-**Tasks:** `generate_data → save_to_cloudsql + save_vitals_to_gcs`
-
-Generates synthetic encounter and vitals records, simultaneously appending to Cloud SQL (so the ETL DAG picks them up) and writing JSON vitals files directly to GCS.
-
-![simulate_patient_visits DAG graph](screenshots/AirFlow/airflow_simulate_visits_dag.png)
-
----
-
-## Data Warehouse: BigQuery
-
-Three BigQuery datasets form a **medallion architecture**:
+## Data Flow
 
 ```
-mythic-chalice-492618-h1/
-├── dbt_hospital_raw/      ← raw tables (loaded by Airflow)
-├── dbt_hospital_stg/      ← staging views (dbt models)
-└── dbt_hospital_mart/     ← mart tables (dbt models, used by BI)
+                    Every 15 min                  Hourly
+  ┌─────────────────────────────┐     ┌──────────────────────────────┐
+  │  Airflow: simulate_visits   │     │  Airflow: healthcare_pipeline│
+  │  • generate encounter       │     │  • Extract from Cloud SQL    │
+  │  • pick procedures from BQ  │     │    (watermark-based)         │
+  │  • save to Cloud SQL        │────>│  • Transform (clean, validate)│
+  │  • save vitals JSONL to GCS │     │  • Load to BQ raw (WRITE_APPEND)│
+  └─────────────────────────────┘     └──────────────────────────────┘
+                                                      │
+                                                      ▼
+                                        BigQuery: dbt_hospital_raw
+                                        (encounters, procedures, patients,
+                                         vitals, payers, medicines, ...)
+                                                      │
+                                              dbt build (hourly)
+                                                      │
+                                  ┌───────────────────┴──────────────────┐
+                                  ▼                                       ▼
+                        dbt_hospital_stg (views)              dbt_hospital_mart (tables)
+                        stg_encounters                         fact_executive_summary
+                        stg_patients                           mart_organ_system_investment
+                        stg_procedures                         mart_encounter_class
+                        stg_vitals                             mart_payer_performance
+                        stg_payers                             mart_readmissions
+                        stg_medicines                          mart_age_demographics_profile
+                        stg_organizations                      mart_vitals_by_visit_frequency
+                        stg_procedure_costs                    mart_monthly_procedure_costs
+                                                                          │
+                                                                          ▼
+                                                              Looker Studio Clinic Report
+                                                              (3 pages, live BigQuery connector)
 ```
 
-![BigQuery Datasets](screenshots/BigQuery/bigquery_datasets.png)
-
-| Dataset | Tables | Type |
-|---|---|---|
-| `dbt_hospital_raw` | encounters, procedures, patients, vitals, medicines, organizations, payers, procedure_costs | Tables |
-| `dbt_hospital_stg` | stg_encounters, stg_patients, stg_procedures, stg_vitals, stg_medicines, stg_organizations, stg_payers, stg_procedure_costs | Views |
-| `dbt_hospital_mart` | fact_executive_summary, mart_age_demographics_profile, mart_encounter_class, mart_monthly_procedure_costs, mart_organ_system_investment, mart_payer_performance, mart_readmissions, mart_vitals_by_visit_frequency | Tables |
-
----
-
-## Transformation: dbt
-
-The dbt project (`Hospital_DBT_BigQuery`) connects to BigQuery and builds all staging and mart models from raw sources.
-
-### Lineage Graph
-
-![dbt Lineage Graph](screenshots/DBT/dbt_lineage_graph.png)
-
-**Flow:** `sources (raw tables + seeds) → stg_* models → mart_* models`
-
-Sources are declared in `sources.yml` pointing to `dbt_hospital_raw`. Seeds are loaded directly as staging-layer reference tables.
-
-### Project Structure
-
-```
-Hospital_DBT_BigQuery/
-├── macros/
-│   ├── age_bucket.sql          ← categorizes age into 18-34, 35-49, 50-64, 65-79, 80+
-│   ├── get_year.sql            ← extracts year from timestamp
-│   ├── pct_of_total.sql        ← calculates % share within a window
-│   └── test_accepted_range.sql ← custom data test macro
-├── models/
-│   ├── staging/
-│   │   ├── stg_encounters.sql
-│   │   ├── stg_patients.sql
-│   │   ├── stg_procedures.sql
-│   │   ├── stg_vitals.sql
-│   │   └── ...
-│   └── mart/
-│       ├── fact_executive_summary.sql
-│       ├── mart_age_demographics_profile.sql
-│       ├── mart_encounter_class.sql
-│       ├── mart_organ_system_investment.sql
-│       ├── mart_payer_performance.sql
-│       ├── mart_readmissions.sql
-│       ├── mart_vitals_by_visit_frequency.sql
-│       └── mart_monthly_procedure_costs.sql
-├── seeds/
-│   ├── organizations.csv
-│   ├── payers.csv
-│   ├── medicines.csv
-│   └── procedure_costs.csv
-└── dbt_project.yml
-```
-
-### Example: `mart_age_demographics_profile.sql`
-
-This mart model joins encounter and patient data, applies the `age_bucket()` macro, and aggregates by age group, gender, and organ system:
-
-```sql
-with base as (
-    select
-        ...
-        {{ age_bucket('age_at_encounter') }}  as age_bucket
-    from {{ ref('stg_encounters') }} e
-    left join {{ ref('stg_patients') }} p
-        on e.patient_id = p.patient_id
-    where p.birth_date is not null
-),
-
-bucketed as (
-    select
-        *,
-        {{ age_bucket('age_at_encounter') }} as age_bucket
-    from base
-)
-
-select
-    age_bucket,
-    gender,
-    organ_system,
-    count(*)                    as encounter_count,
-    count(distinct patient_id)  as unique_patients,
-    sum(total_claim_cost)       as total_revenue,
-    avg(total_claim_cost)       as avg_claim_cost
-from bucketed
-group by 1, 2, 3
-```
-
-![mart_age_demographics preview in BigQuery](screenshots/BigQuery/bigquery_mart_age_demographics_preview.png)
-
-### Data Tests
-
-73 tests covering uniqueness, not-null, accepted values, and custom range checks. All passing in production.
-
-![dbt Tests Passing](screenshots/DBT/dbt_tests_passing.png)
-
-### dbt Cloud Orchestration
-
-A scheduled job (`dbt rerun`) runs `dbt build` every hour, regenerating all mart tables and running all tests. Docs are auto-generated on each run.
-
-![dbt Jobs](screenshots/DBT/dbt_jobs.png)
-
-![dbt Run History](screenshots/DBT/dbt_run_history.png)
-
----
-
-## Dashboards: Looker Studio
-
-A 3-page Looker Studio report connects directly to `dbt_hospital_mart` in BigQuery.
-
-📄 **[Full report PDF](docs/looker_report.pdf)**
-
-### Page 1 — Executive Summary
-
-KPIs: total revenue ($128.6M), avg revenue per encounter ($3,345.79), total encounters (27,924), revenue growth, and insurance coverage breakdowns.
-
-![Executive Summary Dashboard](screenshots/DBT/looker_executive_summary.png)
-
-### Page 2 — Performance & Investment Opportunities
-
-Revenue trends by organ system, encounter class revenue share (treemap), and revenue + visit volume by age group.
-
-![Performance Dashboard](screenshots/DBT/looker_performance.png)
-
-### Page 3 — Statistical Information
-
-Most common procedures over time, insurance coverage distribution, readmission rates by race & gender, and visit frequency segmented by vitals (heart rate × temperature).
-
-![Statistical Dashboard](screenshots/DBT/looker_statistical.png)
-
----
-
-## Key Design Decisions
-
-**Incremental loading with WRITE_APPEND** — The Airflow ETL DAG appends new records to BigQuery raw rather than doing full reloads, keeping pipeline runs fast and cost-efficient as data grows.
-
-**Dual-path vitals ingestion** — Vitals go through GCS rather than directly through the ETL DAG. This decouples high-frequency sensor-style data from transactional records and mirrors a real IoT/streaming architecture pattern.
-
-**dbt macros for reusable logic** — Bucketing logic (`age_bucket`), percentage calculations (`pct_of_total`), and custom test ranges (`test_accepted_range`) are extracted into macros so they're reused consistently across models rather than repeated in SQL.
-
-**Seeds for reference data** — Static lookup tables (payers, medicines, procedure costs) are managed as dbt seeds rather than external loads, keeping the transformation layer self-contained and version-controlled.
-
+![DBT job](screenshots/DBT/dbt_job_runs.png)
 ---
 
 ## Repository Structure
 
 ```
-Hospital-Data-Pipeline/
-├── README.md
-├── docs/
-│   ├── architecture.png        ← pipeline architecture diagram
-│   └── looker_report.pdf       ← exported Looker Studio report
-├── screenshots/
-│   ├── AirFlow/
-│   ├── BigQuery/
-│   ├── CloudSQL__Google-Cloud-Storage/
-│   └── DBT/
+hospital-data-platform/
+│
 ├── airflow_dags/
-│   ├── healthcare_pipeline_incremental.py
-│   └── simulate_patient_visits.py
-└── dbt/
-    ← full dbt project (models, macros, seeds, tests, dbt_project.yml)
+│   ├── simulate_visits_dag.py          # Simulation: generates synthetic encounters every 15 min
+│   └── healthcare_pipeline_dag.py      # ETL: Cloud SQL → BigQuery incremental pipeline
+│
+├── dbt/
+│   ├── dbt_project.yml                 # Project config (schemas: raw / stg / mart)
+│   ├── models/
+│   │   ├── sources.yml                 # BigQuery source declarations
+│   │   ├── stg/                        # Staging views
+│   │   │   ├── schema.yml              # Tests: unique, not_null, FK relationships
+│   │   │   ├── stg_encounters.sql
+│   │   │   ├── stg_patients.sql
+│   │   │   ├── stg_procedures.sql
+│   │   │   ├── stg_vitals.sql
+│   │   │   ├── stg_payers.sql
+│   │   │   ├── stg_organizations.sql
+│   │   │   ├── stg_medicines.sql
+│   │   │   └── stg_procedure_costs.sql
+│   │   └── mart/                       # Analytical mart tables
+│   │       ├── schema.yml              # Business tests & column docs
+│   │       ├── fact_executive_summary.sql
+│   │       ├── mart_organ_system_investment.sql
+│   │       ├── mart_encounter_class.sql
+│   │       ├── mart_payer_performance.sql
+│   │       ├── mart_readmissions.sql
+│   │       ├── mart_age_demographics_profile.sql
+│   │       ├── mart_vitals_by_visit_frequency.sql
+│   │       └── mart_monthly_procedure_costs.sql
+│   ├── macros/
+│   │   ├── age_bucket.sql              # Standardised age grouping
+│   │   ├── pct_of_total.sql            # NULL-safe percentage macro
+│   │   ├── get_year.sql                # Cross-adapter YEAR extraction
+│   │   └── test_accepted_range.sql     # Custom generic test
+│   ├── tests/
+│   │   └── cost_accuracy_test.sql      # base_cost + procedures = total_claim_cost
+│   └── seeds/
+│       ├── organizations.csv
+│       ├── payers.csv
+│       ├── medicines.csv
+│       └── procedure_costs.csv
 ```
 
 ---
 
-## How to Run Locally
+## Pipeline Components
 
-> The live BigQuery and dbt Cloud environments are no longer active (free tier). Use the screenshots and exported report to explore outputs, or recreate using the instructions below.
+### 1. Simulation DAG: `simulate_patient_visits`
 
-**Prerequisites:** GCP project with BigQuery enabled, Cloud SQL instance, Airflow 2.x, dbt Core or dbt Cloud account.
+**Schedule:** every 15 minutes  
+**File:** `airflow_dags/simulate_visits_dag.py`
+
+This DAG continuously feeds the OLTP database with realistic synthetic data. It mimics real-world hospital traffic with weighted encounter class distributions and clinically plausible vitals profiles.
+
+**How it works:**
+
+```python
+# Weighted encounter class selection — mirrors real hospital volume distribution
+ENCOUNTER_CLASSES = ["ambulatory", "outpatient", "wellness", "urgentcare", "emergency", "inpatient"]
+ENCOUNTER_CLASS_WEIGHTS = [12537, 6300, 1931, 3666, 2322, 1135]
+
+enc_class = random.choices(ENCOUNTER_CLASSES, weights=ENCOUNTER_CLASS_WEIGHTS, k=1)[0]
+```
+
+```python
+# Vitals are generated using per-class Gaussian profiles
+# Emergency patients have elevated heart rate and temperature vs. wellness visits
+VITALS_PROFILES = {
+    "emergency":  {"hr": (105, 15), "o2": (95, 2),  "temp": (38.1, 0.4), ...},
+    "wellness":   {"hr": (68, 8),   "o2": (98, 1),  "temp": (36.6, 0.2), ...},
+}
+```
+
+```python
+# Procedure costs are fetched live from BigQuery — not hardcoded
+all_procedures = fetch_procedure_costs()  # queries dbt_hospital_raw.procedure_costs
+selected_procs = random.sample(all_procedures, random.randint(1, 3))
+```
+
+**Task graph:**
+
+```
+generate_data ──┬──> save_to_cloudsql  (encounters + procedures → MySQL)
+                └──> save_vitals_to_gcs (vitals JSONL → GCS hospital-data-lake)
+```
+
+**GCS bucket output:**
+
+The `hospital-data-lake` GCS bucket receives per-encounter JSONL vitals files at:
+```
+vitals_json/vitals_YYYYMMDD_HHMMSS_<encounter_id[:8]>.jsonl
+```
+
+---
+![GCS bucket](screenshots/CLoudSQL__Google-Cloud-Storage/Google_Cloud_Storage_bucket.png)
+
+### 2. ETL DAG: `healthcare_pipeline_incremental`
+
+**Schedule:** hourly at `:10`  
+**File:** `airflow_dags/healthcare_pipeline_dag.py`
+
+Incrementally syncs new rows from Cloud SQL into BigQuery using a **watermark pattern** — only rows newer than the last successful sync are extracted.
+
+```python
+# Watermark-based incremental extraction — no full table scans
+last_sync = Variable.get(WATERMARK_KEY, default_var="2000-01-01T00:00:00+00:00")
+
+enc_df = mysql.get_pandas_df(
+    "SELECT ... FROM encounters WHERE start > %s ORDER BY start",
+    parameters=(last_sync,),
+)
+```
+
+```python
+# After successful load, advance the watermark
+watermark = pd.Timestamp(max_ts).astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+Variable.set(WATERMARK_KEY, watermark)
+```
+
+**Task graph:**
+
+```
+start → extract → transform_enc ──┐
+                 → transform_proc ─┴──> load → end
+```
+
+The `load` task uses `WRITE_APPEND` + BigQuery's native deduplication handled by dbt's `unique_key` constraints in downstream incremental models.
+
+![CloudSQL OLTP](screenshots/CLoudSQL__Google-Cloud-Storage/CloudSQL_DB.png)
+
+---
+
+### 3. dbt Staging Layer
+
+![DBT view](screenshots/DBT/dbt_structure_overview.png)
+
+**Dataset:** `dbt_hospital_stg` (BigQuery views — zero storage cost)
+
+Staging models perform three jobs: renaming columns to a consistent standard, casting types, and removing clearly invalid rows. Nothing is aggregated here.
+
+```sql
+-- stg_encounters.sql — representative example
+select
+    id                                          as encounter_id,
+    patient                                     as patient_id,
+    cast(start as datetime)                     as encounter_start_at,
+    encounterclass                              as encounter_class,
+    cast(total_claim_cost as numeric)           as total_claim_cost,
+    NULLIF(organ_system, '')                    as organ_system   -- strip empty strings
+from {{ source('hospital_raw', 'encounters') }}
+```
+
+**FK tests defined in schema.yml:**
+
+```yaml
+- name: encounter_id
+  tests: [unique, not_null]
+- name: patient_id
+  tests:
+    - relationships:
+        to: ref('stg_patients')
+        field: patient_id
+```
+
+---
+
+### 4. dbt Mart Layer
+
+**Dataset:** `dbt_hospital_mart` (BigQuery materialized tables)
+
+Eight analytical marts, each answering specific business questions:
+
+#### `fact_executive_summary`
+Annual KPIs for leadership — visit volume, revenue, payer split, YoY growth.
+
+```sql
+-- YoY revenue growth using window functions
+round(
+    100.0 * (total_revenue - lag(total_revenue) over (order by encounter_year))
+          / nullif(lag(total_revenue) over (order by encounter_year), 0),
+    2
+) as revenue_growth_pct_yoy
+```
+
+#### `mart_readmissions`
+30-day readmission profiling via a self-join pattern:
+
+```sql
+-- Find the next encounter for the same patient after discharge
+left join encounters nxt
+    on  curr.patient_id        = nxt.patient_id
+    and nxt.encounter_start_at > curr.encounter_end_at
+
+-- Flag if it falls within 30 days
+case
+    when next_encounter_start <= DATETIME_ADD(curr_stop, INTERVAL 30 DAY)
+    then true else false
+end as readmitted_within_30d
+```
+
+#### `mart_age_demographics_profile`
+Uses the shared `age_bucket()` macro for consistent segmentation across all marts:
+
+```sql
+-- From macros/age_bucket.sql
+CASE
+    WHEN age_at_encounter < 18  THEN '<18'
+    WHEN age_at_encounter < 35  THEN '18-34'
+    WHEN age_at_encounter < 50  THEN '35-49'
+    WHEN age_at_encounter < 65  THEN '50-64'
+    WHEN age_at_encounter < 80  THEN '65-79'
+    ELSE '80+'
+END
+```
+
+#### `mart_monthly_procedure_costs` — Incremental model
+The highest-volume mart uses dbt's incremental materialization to avoid full rebuilds:
+
+```sql
+{{ config(
+    materialized     = 'incremental',
+    unique_key       = ['year_month', 'procedure_description'],
+    on_schema_change = 'append_new_columns',
+) }}
+
+{% if is_incremental() %}
+where pr.procedure_start_at > (
+    select max(procedure_start_at_max) from {{ this }}
+)
+{% endif %}
+```
+
+---
+
+### 5. dbt Tests & Macros
+
+![DBT tests](screenshots/DBT/dbt_tests.png)
+
+**Custom macros:**
+
+| Macro | Purpose | Used in |
+|---|---|---|
+| `age_bucket(col)` | Standard age grouping into 6 buckets | mart_age_demographics_profile, mart_readmissions |
+| `pct_of_total(num, denom)` | NULL-safe `ROUND(100.0 * num / NULLIF(denom,0), 2)` | All 8 mart models |
+| `get_year(col)` | `EXTRACT(YEAR FROM col)` — adapter-safe | fact_executive_summary, mart_encounter_class, mart_organ_system_investment |
+| `test_accepted_range` | Custom generic test for range validation | pct fields (0–100), vitals, avg_days_to_readmission |
+
+**Custom singular test:**
+
+```sql
+-- tests/cost_accuracy_test.sql
+-- base_encounter_cost + procedures_total must equal total_claim_cost (tolerance: 0.01)
+select encounter_id, ...
+from stg_encounters
+where abs((base_encounter_cost + procedures_total) - total_claim_cost) > 0.01
+```
+
+---
+
+## BigQuery Datasets
+
+Three datasets created by the pipeline:
+
+| Dataset | Type | Contents |
+|---|---|---|
+| `dbt_hospital_raw` | Tables | Raw source data: encounters, procedures, patients, vitals, payers, medicines, organizations, procedure_costs |
+| `dbt_hospital_stg` | Views | 8 staging views — renamed, cast, cleaned |
+| `dbt_hospital_mart` | Tables | 8 analytical mart tables ready for BI consumption |
+
+
+![BigQuery mart example](screenshots/BigQuery/BQ_mart_example.png)
+
+---
+
+## dbt Cloud Orchestration
+
+![DBT job details](screenshots/DBT/dbt_job_setup.png)
+
+![DBT job runs](screenshots/DBT/dbt_job_runs.png)
+
+---
+
+## Looker Studio Dashboard
+
+**Report:** Clinic Report (3 pages)  
+**Data source:** BigQuery `dbt_hospital_mart` (live connector)
+
+### Page 1 — Executive Summary
+- Total encounters, unique patients, and revenue (KPI scorecards)
+- Revenue and encounter volume trends by year
+- Payer coverage split (% covered vs. out-of-pocket)
+- YoY growth rates
+
+### Page 2 — Performance & Investment Opportunities
+- Top 5 organ systems by revenue over time (area chart)
+- Most Often Affected Organ Systems — ranked table for 2021
+- Total revenue and average claim cost by encounter class (treemap)
+- Revenue and visit count by age group (bar chart)
+
+### Page 3 — Statistical Information
+- Most frequently performed procedures over time (line chart)
+- Insurance coverage distribution (pie chart — Medicare dominates at 61.7%)
+- Visit frequency vs. average temperature scatter
+- Readmission rate by race and gender (bar chart)
+
+---
+
+## Key Business Questions Answered
+
+| Question | Mart |
+|---|---|
+| Are visit volumes growing year-over-year? | `fact_executive_summary` |
+| Which organ systems drive the most revenue? Should we invest in cardiac equipment? | `mart_organ_system_investment` |
+| Has the share of emergency/inpatient visits changed? | `mart_encounter_class` |
+| Which payers leave the most cost to patients? | `mart_payer_performance` |
+| Which patient profiles are most likely to be readmitted within 30 days? | `mart_readmissions` |
+| Where should preventive care programmes be targeted by age and gender? | `mart_age_demographics_profile` |
+| Are high-frequency visitors genuinely sicker (worse vitals)? | `mart_vitals_by_visit_frequency` |
+| Which procedures are driving cost growth month-over-month? | `mart_monthly_procedure_costs` |
+
+---
+
+## Setup & Running
+
+### Prerequisites
+
+- Google Cloud project with BigQuery, Cloud SQL, GCS, and Cloud Composer enabled
+- dbt Cloud account connected to the BigQuery project
+- Python 3.9+ with the packages in `requirements.txt`
+
+### Airflow Connections Required
+
+| Connection ID | Type | Purpose |
+|---|---|---|
+| `cloudsql_clinic` | MySQL | Cloud SQL `clinic_db` |
+| `google_cloud_default` | Google Cloud | BigQuery + GCS access |
+
+### Airflow Variables Required
+
+| Variable | Example Value |
+|---|---|
+| `gcs_bucket` | `hospital-data-lake` |
+| `BQ_PROJECT` | `mythic-chalice-492618-h1` |
+| `BQ_DATASET_RAW` | `dbt_hospital_raw` |
+| `bq_sync_watermark_hourly` | `2022-01-01 00:00:00` (initial seed) |
+
+### dbt Setup
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/Hospital-Data-Pipeline.git
-
-# 2. Set up Airflow connections
-#    - google_cloud_default: your GCP service account
-#    - cloud_sql_proxy: your Cloud SQL connection string
-
-# 3. Enable the DAGs
-airflow dags unpause healthcare_pipeline_incremental
-airflow dags unpause simulate_patient_visits
-
-# 4. Run dbt
 cd dbt/
 dbt deps
-dbt seed          # load reference tables
-dbt build         # run models + tests
-dbt docs generate # generate documentation
+dbt seed          # loads payers, organizations, medicines, procedure_costs CSVs
+dbt build         # runs all models + all 73 tests
+```
+
+### Running just the marts
+
+```bash
+dbt build --select mart
+```
+
+### Running with test output
+
+```bash
+dbt build --store-failures
 ```
 
 ---
 
-## About
+## What's Next / Possible Improvements
 
-Built as a portfolio project demonstrating end-to-end data engineering skills:
-- Cloud infrastructure (GCP: Cloud SQL, GCS, BigQuery, Compute Engine)
-- Pipeline orchestration (Apache Airflow — DAG design, scheduling, operators)
-- Data modeling (dbt — staging/mart layers, macros, tests, lineage)
-- Analytics engineering (dimensional modeling, incremental patterns)
-- Business intelligence (Looker Studio dashboard design)
+- **Alerting:** Add dbt Cloud webhooks or Airflow email alerts for test failures or stale data
+- **ML integration:** Use `mart_readmissions` and `mart_vitals_by_visit_frequency` as feature tables for a readmission risk model (Vertex AI)
+
+---
+
+## Screenshots
+
+### BigQuery — Three-Layer Architecture
+
+The project uses a clean three-dataset separation in BigQuery:
+
+- `dbt_hospital_raw` — 8 source tables (raw data from OLTP)
+- `dbt_hospital_stg` — 8 staging views
+- `dbt_hospital_mart` — 8 analytical mart tables
+
+### Airflow DAGs
+
+Two DAGs run continuously:
+- `simulate_patient_visits` — runs every 15 minutes, 37+ successful runs, generating encounters → Cloud SQL + GCS
+- `healthcare_pipeline_incremental` — runs hourly, syncing new records to BigQuery with watermark-based incremental extraction
+
+### dbt Cloud — 73 Tests, All Passing
+
+All data quality tests pass in production including uniqueness, not_null, FK relationships, accepted value ranges, and the custom `cost_accuracy_test` (tolerance 0.01).
+
+### dbt Lineage Graph
+
+Full end-to-end lineage from source tables through staging to mart layer is visible and documented in dbt Cloud.
+
+---
+
+*Built with Google Cloud · Apache Airflow · dbt · BigQuery · Looker Studio*
