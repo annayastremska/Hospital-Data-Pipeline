@@ -1,0 +1,178 @@
+version: 2
+
+models:
+
+  # ---------------------------------------------------------------------------
+  # patients
+  # ---------------------------------------------------------------------------
+  - name: stg_patients
+    description: Cleaned patient demographic data.
+    columns:
+      - name: patient_id
+        description: Primary key.
+        tests:
+          - unique
+          - not_null
+
+  # ---------------------------------------------------------------------------
+  # organizations
+  # ---------------------------------------------------------------------------
+  - name: stg_organizations
+    description: Hospital / organisation details.
+    columns:
+      - name: organization_id
+        description: Primary key.
+        tests:
+          - unique
+          - not_null
+
+  # ---------------------------------------------------------------------------
+  # payers
+  # ---------------------------------------------------------------------------
+  - name: stg_payers
+    description: Insurance payer data.
+    columns:
+      - name: payer_id
+        description: Primary key.
+        tests:
+          - unique
+          - not_null
+
+  # ---------------------------------------------------------------------------
+  # medicines
+  # ---------------------------------------------------------------------------
+  - name: stg_medicines
+    description: Reference table of medicines and unit costs.
+    columns:
+      - name: medicine_id
+        description: Primary key.
+        tests:
+          - unique
+          - not_null
+
+  # ---------------------------------------------------------------------------
+  # procedure_costs
+  # ---------------------------------------------------------------------------
+  - name: stg_procedure_costs
+    description: Reference table of procedure codes and base costs.
+    columns:
+      - name: procedure_code
+        description: Primary key.
+        tests:
+          - unique
+          - not_null
+
+  # ---------------------------------------------------------------------------
+  # encounters
+  # ---------------------------------------------------------------------------
+  - name: stg_encounters
+    description: Patient encounter records.
+    columns:
+      - name: encounter_id
+        description: Primary key.
+        tests:
+          - unique
+          - not_null
+      - name: patient_id
+        description: FK → stg_patients.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_patients')
+                field: patient_id
+      - name: organization_id
+        description: FK → stg_organizations.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_organizations')
+                field: organization_id
+      - name: payer_id
+        description: FK → stg_payers.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_payers')
+                field: payer_id
+      - name: base_encounter_cost
+        tests:
+          - not_null
+      - name: total_claim_cost
+        tests:
+          - not_null
+
+  # ---------------------------------------------------------------------------
+  # procedures
+  # ---------------------------------------------------------------------------
+  - name: stg_procedures
+    description: Procedure-level records per encounter.
+    columns:
+      - name: encounter_id
+        description: FK → stg_encounters.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_encounters')
+                field: encounter_id
+      - name: patient_id
+        description: FK → stg_patients.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_patients')
+                field: patient_id
+      - name: procedure_cost
+        tests:
+          - not_null
+      - name: medicine_cost
+        tests:
+          - not_null
+
+  # ---------------------------------------------------------------------------
+  # vitals
+  # ---------------------------------------------------------------------------
+  - name: stg_vitals
+    description: Flattened vitals from JSONL source.
+    columns:
+      - name: patient_id
+        description: FK → stg_patients.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_patients')
+                field: patient_id
+      - name: encounter_id
+        description: FK → stg_encounters.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_encounters')
+                field: encounter_id
+      - name: recorded_at
+        tests:
+          - not_null
+      - name: heart_rate
+        tests:
+          - not_null
+      - name: oxygen_level
+        tests:
+          - not_null
+      - name: systolic_bp
+        tests:
+          - not_null
+      - name: diastolic_bp
+        tests:
+          - not_null
+      - name: temperature_c
+        tests:
+          - not_null
+      - name: respiratory_rate
+        tests:
+          - not_null

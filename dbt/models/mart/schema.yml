@@ -1,0 +1,273 @@
+version: 2
+
+models:
+
+  # ────────────────────────────────────────────────────────────
+  # MART 1 — Executive Summary
+  # ────────────────────────────────────────────────────────────
+  - name: fact_executive_summary
+    description: >
+      Annual executive KPIs: encounter volume, revenue, payer coverage,
+      zero-coverage encounters, and YoY growth rates.
+      One row per calendar year.
+    config:
+      tags: [mart, executive]
+    columns:
+      - name: encounter_year
+        description: Calendar year (e.g. 2021)
+        data_tests:
+          - not_null
+          - unique
+
+      - name: total_encounters
+        description: Total encounter count for the year
+        data_tests:
+          - not_null
+
+      - name: unique_patients
+        description: Distinct patients seen during the year
+        data_tests:
+          - not_null
+
+      - name: total_revenue
+        description: Sum of total_claim_cost across all encounters
+        data_tests:
+          - not_null
+
+      - name: pct_covered_by_payer
+        description: Percentage of total revenue covered by payers (0-100)
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+      - name: pct_zero_coverage
+        description: Percentage of encounters with zero payer coverage
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+  # ────────────────────────────────────────────────────────────
+  # MART 2 — Organ System Investment Signal
+  # ────────────────────────────────────────────────────────────
+  - name: mart_organ_system_investment
+    description: >
+      Encounter volume and revenue by organ system per year,
+      ranked to guide equipment and staffing investment decisions.
+    config:
+      tags: [mart, clinical, investment]
+    columns:
+      - name: encounter_year
+        description: Calendar year
+        data_tests:
+          - not_null
+
+      - name: organ_system
+        description: Clinical organ system (e.g. Cardiovascular, Respiratory)
+        data_tests:
+          - not_null
+
+      - name: pct_of_year_encounters
+        description: Share of total encounters in that year belonging to this system
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+      - name: volume_rank
+        description: Rank by encounter count within each year (1 = highest)
+        data_tests:
+          - not_null
+
+  # ────────────────────────────────────────────────────────────
+  # MART 3 — Vitals by Visit Frequency
+  # ────────────────────────────────────────────────────────────
+  - name: mart_vitals_by_visit_frequency
+    description: >
+      Compares average vital signs between high-, medium-,
+      and low-frequency visitors in 2022.
+      Helps identify whether frequent visitors are genuinely sicker.
+    config:
+      tags: [mart, clinical, vitals]
+    columns:
+      - name: frequency_bucket
+        description: high_frequency | medium_frequency | low_frequency
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values: [high_frequency, medium_frequency, low_frequency]
+
+      - name: avg_oxygen_level
+        description: Average SpO2 reading (should be 95-100 for healthy patients)
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 70
+                max_value: 100
+
+      - name: avg_heart_rate
+        description: Average heart rate in bpm
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 30
+                max_value: 200
+
+  # ────────────────────────────────────────────────────────────
+  # MART 4 — Encounter Class Distribution
+  # ────────────────────────────────────────────────────────────
+  - name: mart_encounter_class
+    description: >
+      Yearly percentage breakdown of encounters by class
+      (ambulatory, outpatient, wellness, urgentcare, emergency, inpatient).
+      Reveals shifts in care-setting utilisation over time.
+    config:
+      tags: [mart, executive, operations]
+    columns:
+      - name: encounter_year
+        description: Calendar year
+        data_tests:
+          - not_null
+
+      - name: encounter_class
+        description: Type of care setting
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  [ambulatory, outpatient, wellness, urgentcare, emergency, inpatient]
+
+      - name: pct_of_encounters
+        description: Percentage of that year's total encounters
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+  # ────────────────────────────────────────────────────────────
+  # MART 5 — Payer Performance
+  # ────────────────────────────────────────────────────────────
+  - name: mart_payer_performance
+    description: >
+      Financial summary per payer: total billed, average claim cost,
+      payer coverage rate, and zero-coverage encounter count.
+      Directly answers the payer exposure questions in idea #6.
+    config:
+      tags: [mart, finance, payers]
+    columns:
+      - name: payer_name
+        description: Name of the insurance payer (including NO_INSURANCE)
+        data_tests:
+          - not_null
+          - unique
+
+      - name: pct_cost_covered_by_payer
+        description: Percentage of total billed cost covered by payer
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+      - name: zero_coverage_encounters
+        description: Count of encounters where payer paid nothing
+        data_tests:
+          - not_null
+
+  # ────────────────────────────────────────────────────────────
+  # MART 6 — 30-Day Readmissions
+  # ────────────────────────────────────────────────────────────
+  - name: mart_readmissions
+    description: >
+      Readmission rate within 30 days of discharge, broken down by
+      organ system, encounter class, age bucket, race, and gender.
+      Identifies high-risk patient profiles for care management.
+    config:
+      tags: [mart, clinical, quality]
+    columns:
+      - name: organ_system
+        description: Clinical system associated with the index encounter
+        data_tests:
+          - not_null
+
+      - name: readmission_rate_pct
+        description: Percentage of encounters in this segment that led to readmission
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+      - name: avg_days_to_readmission
+        description: Average days between discharge and next admission (≤30)
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 30
+
+  # ────────────────────────────────────────────────────────────
+  # MART 7 — Age & Demographics Health Profile
+  # ────────────────────────────────────────────────────────────
+  - name: mart_age_demographics_profile
+    description: >
+      Encounter volume, revenue, and acuity by age group, gender,
+      and organ system.  Identifies which demographic segments
+      drive the most utilisation and where preventive care is needed.
+    config:
+      tags: [mart, clinical, demographics]
+    columns:
+      - name: age_bucket
+        description: Age group at time of encounter (<18, 18-34, 35-49, 50-64, 65-79, 80+)
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['<18', '18-34', '35-49', '50-64', '65-79', '80+']
+
+      - name: pct_high_acuity_encounters
+        description: Percentage of encounters that were inpatient or emergency
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+  # ────────────────────────────────────────────────────────────
+  # MART 8 — Monthly Procedure Costs (Incremental)
+  # ────────────────────────────────────────────────────────────
+  - name: mart_monthly_procedure_costs
+    description: >
+      Incremental mart aggregating procedure and medicine costs
+      by month and procedure type.  Grows with new data each run
+      without rebuilding historical rows.
+    config:
+      tags: [mart, finance, incremental]
+    columns:
+      - name: year_month
+        description: First day of the month (date grain)
+        data_tests:
+          - not_null
+
+      - name: procedure_description
+        description: Name of the procedure performed
+        data_tests:
+          - not_null
+
+      - name: total_procedure_cost
+        description: Sum of procedure costs for this month and procedure type
+        data_tests:
+          - not_null
+
+      - name: procedure_start_at_max
+        description: Watermark column used by incremental logic — do not query directly

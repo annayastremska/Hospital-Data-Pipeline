@@ -1,0 +1,9 @@
+sources:
+  - name: hospital_raw
+    database: mythic-chalice-492618-h1
+    schema: dbt_hospital_raw
+    tables:
+      - name: encounters
+      - name: procedures
+      - name: patients
+      - name: vitals

@@ -1,0 +1,158 @@
+procedure_code,procedure_description,procedure_base_cost,cost_category
+183450002,Admission to burn unit,431,low
+305340004,Admission to long stay hospital,431,low
+305428000,Admission to orthopedic department,431,low
+305433001,Admission to trauma surgery department,431,low
+305351004,Admit to ICU (procedure),199610,very_high
+395142003,Allergy screening test,431,low
+275833003,Alpha-fetoprotein test,3053,moderate
+19490002,Ankle X-ray,431,low
+169673001,Antenatal RhD antibody screening,1935,moderate
+80146002,Appendectomy,15825,high
+710841007,Assessment of anxiety (procedure),431,low
+710824005,Assessment of health and social care needs (procedure),431,low
+428211000124100,Assessment of substance use (procedure),431,low
+763302001,Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure),431,low
+762993000,Assessment using Morse Fall Scale (procedure),431,low
+762998009,Assessment using New York Heart Association Classification (procedure),431,low
+237001001,Augmentation of labor,3546,moderate
+225158009,Auscultation of the fetal heart,8023,high
+287664005,Bilateral tubal ligation,9929,high
+122548005,Biopsy of breast (procedure),3426,moderate
+76164006,Biopsy of colon,12134,high
+65575008,Biopsy of prostate,2787,moderate
+44608003,Blood typing  RH typing,3137,moderate
+312681000,Bone density scan (procedure),14436,high
+274474001,Bone immobilization,431,low
+162676008,Brief general examination (procedure),169,low
+76746007,Cardiovascular stress testing (procedure),431,low
+18286008,Catheter ablation of tissue of heart,6527,high
+11466000,Cesarean section,6512,high
+367336001,Chemotherapy (procedure),431,low
+66348005,Childbirth,431,low
+310861008,Chlamydia antigen test,2966,moderate
+168594001,Clavicle X-ray,431,low
+228557008,Cognitive and behavioral therapy (regime/therapy),10274,high
+73761001,Colonoscopy,13620,high
+703423002,Combined chemotherapy and radiation therapy (procedure),11620,high
+418891003,Computed tomography of chest and abdomen,11582,high
+26763009,Controlled ventilation procedure and therapy  initiation and management (procedure),431,low
+232717009,Coronary artery bypass grafting,32564,very_high
+10383002,Counseling for termination of pregnancy,431,low
+90226004,Cytopathology procedure  preparation of smear  genital source (procedure),2999,moderate
+171207006,Depression screening (procedure),431,low
+715252007,Depression screening using Patient Health Questionnaire Nine Item score (procedure),31,low
+454711000124102,Depression screening using Patient Health Questionnaire Two-Item score (procedure),431,low
+173160006,Diagnostic fiberoptic bronchoscopy (procedure),9796,high
+410006001,Digital examination of rectum,564,moderate
+40701008,Echocardiography (procedure),770,moderate
+180325003,Electrical cardioversion,30559,very_high
+29303009,Electrocardiographic procedure,988,moderate
+18946005,Epidural anesthesia,1346,moderate
+85548006,Episiotomy,5602,high
+274804006,Evaluation of uterine fundal height,3632,moderate
+69031006,Excision of breast tissue (procedure),4009,moderate
+443497002,Excision of sentinel lymph node (procedure),12456,high
+65546002,Extraction of wisdom tooth,11377,high
+261352009,Face mask (physical object),2,low
+271442007,Fetal anatomy study,431,low
+432231006,Fine needle aspiration biopsy of lung (procedure),23141,very_high
+165829005,Gonorrhea infection test,2269,moderate
+398171003,Hearing examination (procedure),431,low
+423475008,Heart failure education (procedure),431,low
+302497006,Hemodialysis (procedure),32261,very_high
+104091002,Hemoglobin / Hematocrit / Platelet count,2188,moderate
+47758006,Hepatitis B Surface Antigen Measurement,1649,moderate
+104375008,Hepatitis C antibody test,1830,moderate
+16335031000119100,High resolution computed tomography of chest without contrast (procedure),431,low
+385763009,Hospice care (regime/therapy),431,low
+434363004,Human epidermal growth factor receptor 2 gene detection by fluorescence in situ hybridization (procedure),2043,moderate
+433114000,Human epidermal growth factor receptor 2 gene detection by immunohistochemistry (procedure),247,low
+31676001,Human immunodeficiency virus antigen test,1515,moderate
+714812005,Induced termination of pregnancy,8056,high
+311791003,Information gathering (procedure),65,low
+384700001,Injection of tetanus antitoxin,2109,moderate
+447365002,Insertion of biventricular implantable cardioverter defibrillator,38711,very_high
+112798008,Insertion of endotracheal tube (procedure),298,low
+65200003,Insertion of intrauterine contraceptive device,11020,high
+169553002,Insertion of subcutaneous contraceptive,4452,moderate
+236974004,Instrumental delivery,5235,high
+76601001,Intramuscular injection,2477,moderate
+180207008,Intravenous blood transfusion of packed cells (procedure),2029,moderate
+52765003,Intubation,321,low
+74016001,Knee X-ray,431,low
+45595009,Laparoscopic Removal of Gall Bladder,10159,high
+392021009,Lumpectomy of breast (procedure),29349,very_high
+698354004,Magnetic resonance imaging for measurement of brain volume (procedure),5050,high
+241615005,Magnetic resonance imaging of breast (procedure),1749,moderate
+241055006,Mammogram - symptomatic (procedure),112,low
+71651007,Mammography (procedure),98,low
+35025007,Manual pelvic examination (procedure),166,low
+104326007,Measurement of Varicella-zoster virus antibody,2293,moderate
+23426006,Measurement of respiratory function (procedure),412,low
+31208007,Medical induction of labor,3574,moderate
+430193006,Medication Reconciliation (procedure),553,moderate
+385892002,Mental health screening (procedure),29,low
+236931002,Methotrexate injection into tubal pregnancy,2624,moderate
+61594008,Microbial culture (procedure),431,low
+182777000,Monitoring of patient (regime/therapy),431,low
+229064008,Movement therapy (regime/therapy),431,low
+112790001,Nasal sinus endoscopy (procedure),6124,high
+371908008,Oxygen administration by mask (procedure),431,low
+43075005,Partial resection of colon,17509,high
+58000006,Patient discharge (procedure),431,low
+268425006,Pelvis X-ray,431,low
+415070008,Percutaneous coronary intervention,29007,very_high
+433112001,Percutaneous mechanical thrombectomy of portal vein using fluoroscopic guidance,14101,high
+14768001,Peripheral blood smear interpretation,431,low
+5880005,Physical examination,431,low
+431182000,Placing subject in prone position (procedure),431,low
+399208008,Plain chest X-ray (procedure),7358,high
+386394001,Pregnancy termination care,643,moderate
+65588006,Premature birth of newborn,431,low
+90470006,Prostatectomy,5733,high
+408919008,Psychosocial care (regime/therapy),431,low
+15081005,Pulmonary rehabilitation (regime/therapy),1823,moderate
+274031008,Rectal polypectomy,11963,high
+417511005,Referral to home health care service (procedure),431,low
+68254000,Removal of intrauterine device,7651,high
+301807007,Removal of subcutaneous contraceptive,10803,high
+265764009,Renal dialysis (procedure),903,moderate
+46706006,Replacement of contraceptive intrauterine device,8726,high
+430701006,Resuscitation using intravenous fluid (procedure),431,low
+415300000,Review of systems (procedure),64,low
+51116004,RhD passive immunization,3854,moderate
+169690007,Rubella screening,2893,moderate
+443529005,Screening for chromosomal aneuploidy in prenatal amniotic fluid,1484,moderate
+866148006,Screening for domestic abuse (procedure),431,low
+713106006,Screening for drug abuse (procedure),431,low
+104435004,Screening for occult blood in feces (procedure),6425,high
+24623002,Screening mammography (procedure),96,low
+396487001,Sentinel lymph node biopsy (procedure),9354,high
+28163009,Skin test for tuberculosis,1923,moderate
+127783003,Spirometry (procedure),13182,high
+177157003,Spontaneous breech delivery,4948,moderate
+269911007,Sputum examination (procedure),4412,moderate
+167995008,Sputum microscopy (procedure),6963,high
+252160004,Standard pregnancy test,5405,high
+118001005,Streptococcus pneumoniae group B antigen test,1620,moderate
+180256009,Subcutaneous immunotherapy,11301,high
+225337009,Suicide risk assessment (procedure),9,low
+699253003,Surgical manipulation of joint of knee,17531,high
+288086009,Suture open wound,7442,high
+269828009,Syphilis infection test,2286,moderate
+33195004,Teleradiotherapy procedure (procedure),792,moderate
+91602002,Thoracentesis (procedure),19622,high
+117015009,Throat culture (procedure),1668,moderate
+449214001,Transfer to stepdown unit (procedure),431,low
+426701000119108,Ultrasonography of abdomen  right upper quadrant and epigastrium,431,low
+1571000087109,Ultrasonography of bilateral breasts (procedure),1624,moderate
+169230002,Ultrasound scan for fetal viability,5951,high
+1225002,Upper arm X-ray,431,low
+117010004,Urine culture,2707,moderate
+167271000,Urine protein test,2198,moderate
+268556000,Urine screening for glucose,2572,moderate
+395123002,Urine screening test for diabetes,1880,moderate
+399014008,Vaccination for diphtheria  pertussis  and tetanus,1371,moderate
+22523008,Vasectomy,16476,high
+60027007,X-ray or wrist,431,low

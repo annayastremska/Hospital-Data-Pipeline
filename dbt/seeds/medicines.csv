@@ -1,0 +1,51 @@
+medicine_id,medicine_name,category,route,unit_cost
+MED001,Acetaminophen 500mg,analgesic,oral,12
+MED002,Ibuprofen 400mg,analgesic,oral,18
+MED003,Morphine 10mg/mL,opioid,IV,145
+MED004,Fentanyl 50mcg/mL,opioid,IV,210
+MED005,Amoxicillin 500mg,antibiotic,oral,28
+MED006,Ciprofloxacin 400mg,antibiotic,IV,185
+MED007,Vancomycin 1g,antibiotic,IV,320
+MED008,Piperacillin-Tazobactam 4.5g,antibiotic,IV,410
+MED009,Metronidazole 500mg,antibiotic,IV,140
+MED010,Ceftriaxone 1g,antibiotic,IV,220
+MED011,Ondansetron 4mg,antiemetic,IV,65
+MED012,Metoclopramide 10mg,antiemetic,oral,22
+MED013,Lisinopril 10mg,antihypertensive,oral,15
+MED014,Amlodipine 5mg,antihypertensive,oral,18
+MED015,Metoprolol 50mg,antihypertensive,oral,20
+MED016,Atorvastatin 40mg,statin,oral,35
+MED017,Heparin 5000 IU,anticoagulant,IV,180
+MED018,Warfarin 5mg,anticoagulant,oral,25
+MED019,Enoxaparin 40mg,anticoagulant,SC,155
+MED020,Insulin Glargine 100U/mL,insulin,SC,220
+MED021,Insulin Regular 100U/mL,insulin,IV,190
+MED022,Albuterol 2.5mg/3mL,bronchodilator,inhaled,75
+MED023,Ipratropium 0.5mg/2.5mL,bronchodilator,inhaled,90
+MED024,Dexamethasone 4mg/mL,corticosteroid,IV,120
+MED025,Methylprednisolone 125mg,corticosteroid,IV,195
+MED026,Prednisone 20mg,corticosteroid,oral,22
+MED027,Midazolam 5mg/mL,sedative,IV,175
+MED028,Propofol 200mg/20mL,sedative,IV,280
+MED029,Lorazepam 2mg/mL,sedative,IV,145
+MED030,Furosemide 40mg,diuretic,IV,85
+MED031,Normal Saline 0.9% 1000mL,IV_fluid,IV,48
+MED032,Lactated Ringer 1000mL,IV_fluid,IV,52
+MED033,Dextrose 5% 500mL,IV_fluid,IV,45
+MED034,Epinephrine 1mg/mL,vasopressor,IV,190
+MED035,Norepinephrine 4mg/250mL,vasopressor,IV,310
+MED036,Dopamine 400mg/250mL,vasopressor,IV,275
+MED037,Aspirin 81mg,antiplatelet,oral,8
+MED038,Clopidogrel 75mg,antiplatelet,oral,42
+MED039,Pantoprazole 40mg,PPI,IV,115
+MED040,Omeprazole 20mg,PPI,oral,24
+MED041,Diphenhydramine 25mg,antihistamine,IV,55
+MED042,Cetirizine 10mg,antihistamine,oral,14
+MED043,Metformin 500mg,antidiabetic,oral,18
+MED044,Glipizide 5mg,antidiabetic,oral,22
+MED045,Gabapentin 300mg,neuropathic,oral,38
+MED046,Amiodarone 200mg,antiarrhythmic,oral,145
+MED047,Digoxin 0.25mg,antiarrhythmic,oral,85
+MED048,Potassium Chloride 20mEq,electrolyte,IV,62
+MED049,Magnesium Sulfate 2g/50mL,electrolyte,IV,78
+MED050,Calcium Gluconate 1g/10mL,electrolyte,IV,90
