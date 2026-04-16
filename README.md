@@ -38,13 +38,14 @@ This project simulates a real-world hospital data engineering workflow. It conti
 - 8 analytical marts covering executive KPIs, clinical quality, financial exposure, and demographic profiling
 - Live Looker Studio report connected directly to BigQuery mart tables
 
-[![Interactive Dashboard](docs/dashboard_preview.png)](https://datastudio.google.com/reporting/6bac9074-a888-4066-94c7-3f48dce74a10)
+### 📊 Dashboard
+
+- [Interactive Version (Looker Studio)](https://datastudio.google.com/reporting/6bac9074-a888-4066-94c7-3f48dce74a10)  
+- [Static PDF Version](docs/your_report.pdf)
 
 ---
 
 ## Architecture
-
-![Architecture Diagram](docs/architecture.png)
 
 The platform is organised into six logical layers:
 
@@ -73,7 +74,7 @@ The platform is organised into six logical layers:
 | **Looker Studio** | BI dashboards connected live to BigQuery marts |
 | **Python (pandas, google-cloud)** | ETL logic inside Airflow PythonOperators |
 
-![DBT lineage](screenshots/DBT/dbt_lineage.png)
+![DBT lineage](screenshots/DBT/01_dbt_lineage.png)
 
 ---
 
@@ -390,7 +391,7 @@ Three datasets created by the pipeline:
 | `dbt_hospital_mart` | Tables | 8 analytical mart tables ready for BI consumption |
 
 
-![BigQuery mart example](screenshots/BigQuery/BQ_mart_example.png)
+![BigQuery mart example](screenshots/BigQuery/BQ_mart_EXAMPLE.png)
 
 ---
 
@@ -398,11 +399,14 @@ Three datasets created by the pipeline:
 
 ![DBT job details](screenshots/DBT/dbt_job_setup.png)
 
-![DBT job runs](screenshots/DBT/dbt_job_runs.png)
-
 ---
 
 ## Looker Studio Dashboard
+
+### 📊 Dashboard
+
+- [Interactive Version (Looker Studio)](https://datastudio.google.com/reporting/6bac9074-a888-4066-94c7-3f48dce74a10)  
+- [Static PDF Version](docs/your_report.pdf)
 
 **Report:** Clinic Report (3 pages)  
 **Data source:** BigQuery `dbt_hospital_mart` (live connector)
@@ -493,32 +497,6 @@ dbt build --store-failures
 
 - **Alerting:** Add dbt Cloud webhooks or Airflow email alerts for test failures or stale data
 - **ML integration:** Use `mart_readmissions` and `mart_vitals_by_visit_frequency` as feature tables for a readmission risk model (Vertex AI)
-
----
-
-## Screenshots
-
-### BigQuery — Three-Layer Architecture
-
-The project uses a clean three-dataset separation in BigQuery:
-
-- `dbt_hospital_raw` — 8 source tables (raw data from OLTP)
-- `dbt_hospital_stg` — 8 staging views
-- `dbt_hospital_mart` — 8 analytical mart tables
-
-### Airflow DAGs
-
-Two DAGs run continuously:
-- `simulate_patient_visits` — runs every 15 minutes, 37+ successful runs, generating encounters → Cloud SQL + GCS
-- `healthcare_pipeline_incremental` — runs hourly, syncing new records to BigQuery with watermark-based incremental extraction
-
-### dbt Cloud — 73 Tests, All Passing
-
-All data quality tests pass in production including uniqueness, not_null, FK relationships, accepted value ranges, and the custom `cost_accuracy_test` (tolerance 0.01).
-
-### dbt Lineage Graph
-
-Full end-to-end lineage from source tables through staging to mart layer is visible and documented in dbt Cloud.
 
 ---
 
